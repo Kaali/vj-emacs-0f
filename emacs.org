@@ -1,0 +1,1231 @@
+#+TITLE: Emacs configuration for 2015
+#+AUTHOR: Väinö Järvelä
+
+* Intro
+
+This is a new configuration file for Emacs, for the year 2015. This
+time I'm trying out using org-babel for folding and comments. The
+configuration file will be based on my quite well serving [[https://github.com/Kaali/vj-emacs-0d][vj-emacs-0d]]
+configuration.
+
+The new file is based on multiple modern org-babel based emacs
+configurations, such as [[http://pages.sachachua.com/.emacs.d/Sacha.html][Sacha Chua's]] and [[https://raw.githubusercontent.com/jhenahan/emacs.d/master/emacs-init.org][Jack Henahan's]].
+
+There are multiple things which are going to be experimental for me,
+such as using [[https://github.com/rdallasgray/pallet][Pallet]] and [[https://github.com/edvorg/req-package][req-package]] for package management, instead
+of just using package-list system as in the previous configuration.
+
+I also use [[https://github.com/quelpa/quelpa][Quelpa]] instead of [[https://github.com/dimitri/el-get][el-get]] for packages that cannot be
+installed by Cask, such as [[http://emacswiki.org/][emacs wiki]] snippets or SCM packages.
+
+* Installation
+** Cask[fn:1]
+
+Because I'm using Pallet and Cask, there are some initial setup to be
+done for them.
+
+Run the following command to install Cask:
+
+#+NAME: Cask Installation
+#+BEGIN_SRC sh
+  $ curl -fsSkL https://raw.github.com/cask/cask/master/go | python
+#+END_SRC
+
+and add =~/.cask/bin= to your =PATH=.
+
+** Creating a Caskfile
+
+Setup a minimal =Cask= to get Pallet set up.
+
+#+NAME: Cask
+#+BEGIN_SRC emacs-lisp :tangle no
+  (source gnu)
+  (source melpa)
+  (source org)
+
+  (depends-on "pallet")
+  (depends-on "req-package")
+  (depends-on "moe-theme")
+#+END_SRC
+
+Then run the following command in your =.emacs.d= directory to set up
+Pallet:
+
+#+NAME: Cask Initialization
+#+BEGIN_SRC sh
+  cask install
+#+END_SRC
+
+** Initialize Cask
+
+Initialzie Cask by adding the following lines to our init file:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (require 'cask "~/.cask/cask.el")
+  (cask-initialize)
+#+END_SRC
+
+* System dependencies
+
+** Email
+
+I use [[http://www.djcbsoftware.nl/code/mu/mu4e.html][mu4e]] as my email client, which has system dependency on [[http://www.djcbsoftware.nl/code/mu/][mu]]. And
+other stuff to actually get email on my computer.
+
+I use [[http://brew.sh/][homebrew]] for handling external packages on my Mac, so to install
+required packages using it to read email, run the following command:
+
+#+NAME mu4e dependencies
+#+BEGIN_SRC sh
+  brew install mu html2text offline-imap
+#+END_SRC
+
+To actually get [[http://offlineimap.org/][offline-imap]] to read to fetch your mail, set it up
+according to the website. I cannot include my configuration here
+because of security reasons. But as a tip for Mac users, you can get
+keychain working for passwords, so you don't have to hardcode them in
+plaintext to your =.offlineimaprc= file.
+
+* Functions
+** OSX Keychain
+Here's a function to fetch a password from OSX keychain. Great for not
+including passwords in .el files.
+
+#+BEGIN_SRC emacs-lisp
+  (defun vj/get-keychain-password (account server keychain)
+    (with-temp-buffer
+      (call-process-shell-command "security" nil (current-buffer) nil "-v find-internet-password -g -a" account "-s" server keychain)
+      (goto-char 0)
+      (re-search-forward "password: \"\\(.*\\)\"")
+      (match-string 1)))
+#+END_SRC
+
+* Configuration
+** Bootstrap
+We need to bootstrap =Quelpa= to get it working:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (if (require 'quelpa nil t)
+      (quelpa-self-upgrade)
+    (with-temp-buffer
+      (url-insert-file-contents "https://raw.github.com/quelpa/quelpa/master/bootstrap.el")
+      (eval-buffer)))
+#+END_SRC
+
+** Package management
+This time I will use =req-package= as the package manager, so we have
+to initialize it at the beginning of our configuration.
+
+Here I define my custom =quelpa= provider for =req-package=, to be
+able to fetch packages not found in =melpa= etc. through
+=quelpa=. =el-get= would have been supported by =req-package= out of
+the box, but it is a new year, so I'm trying out new stuff wholesale.
+
+*TODO* I have to test this quelpa stuff out, disabled for now.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (defconst vj/req-package-quelpa-present (if (require 'quelpa nil t) t nil))
+
+  (defcustom req-quelpa-sources '()
+    "List of quelpa source for req-package quelpa provider"
+    :group 'req-package)
+
+  (defun vj/req-package-quelpa-get-package (package)
+    (plist-get req-quelpa-sources package))
+
+  (defun vj/req-package-try-quelpa (package)
+    (when vj/req-package-quelpa-present
+        (let ((quelpa-package (vj/req-package-quelpa-get-package package)))
+          (when quelpa-package
+            (quelpa package)))))
+#+END_SRC
+
+Set up my custom =quelpa= sources.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (setq req-quelpa-sources
+        '(helm-cscope
+          '(helm-scope :repo "Kaali/helm-cscope" :fetcher github)))
+#+END_SRC
+
+Initialize =req-package= and =bind-key=:
+
+#+BEGIN_SRC emacs-lisp
+  (require 'req-package)
+  (require 'bind-key)
+#+END_SRC
+
+Add custom providers to =req-package=:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (setq req-package-providers '(req-package-try-elpa
+                                vj/req-package-try-quelpa))
+#+END_SRC
+
+I will also use =bind-key= for binding keys, not my usual way of
+binding all keys in a single place. There is a couple of advantages
+using =bind-key=:
+
+1. Keys are close to the package which provides the functions
+2. They are only bound when the package is actually loaded
+3. =describe-personal-keybindings= can be used to list bindings and
+   conflicts, so a single place to define them all is not necessary
+   anymore
+
+=use-package= ~:bind~ doesn't seem to work with =req-package=, I hope
+rest of the features works as advertised. Need to test them out or
+remove =req-package=.
+
+** General Emacs configuration
+*** Basic settings
+Some really basic self-explanatory settings:
+
+#+BEGIN_SRC emacs-lisp
+  (setq
+   inhibit-startup-message t
+   require-final-newline t
+   major-mode 'text-mode)
+
+  (put 'narrow-to-region 'disabled nil)
+
+  (defalias 'yes-or-no-p 'y-or-n-p)
+
+  (setq sentence-end-double-space nil)
+#+END_SRC
+
+Revert changed files automatically if I haven't touched them:
+
+#+BEGIN_SRC emacs-lisp
+  (global-auto-revert-mode t)
+#+END_SRC
+
+I like to continue where I left off in a file:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package saveplace
+    :init
+    (progn
+      (setq savehist-file "~/.emacs.d/savehist"
+            history-length t
+            history-delete-duplicates t
+            save-place t
+            savehist-additional-variables '(kill-ring
+                                            mark-ring
+                                            global-mark-ring
+                                            search-ring
+                                            regexp-search-ring
+                                            extended-command-history))
+      (savehist-mode 1)))
+#+END_SRC
+
+Mark-ring is navigable by typing C-u C-SPC and then repeating C-SPC
+forever:
+
+#+BEGIN_SRC emacs-lisp
+  (setq set-mark-command-repeat-pop t)
+#+END_SRC
+
+When executing shell comannds from emacs, set =PATH= correctly:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package exec-path-from-shell
+    :config
+    (progn
+      (setq exec-path-from-shell-arguments
+            (delete "-i" exec-path-from-shell-arguments))
+      (when (memq window-system '(mac ns))
+        (exec-path-from-shell-initialize))))
+#+END_SRC
+
+Delete selected text when backspacing:
+
+#+BEGIN_SRC emacs-lisp
+  (delete-selection-mode t)
+#+END_SRC
+
+When splitting windows, resize them all equally instead of just
+splitting the active window:
+
+#+BEGIN_SRC emacs-lisp
+  (setq window-combination-resize t)
+#+END_SRC
+
+*** Locale
+I want utf-8:
+
+#+BEGIN_SRC emacs-lisp
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (set-language-environment "UTF-8")
+  (prefer-coding-system 'utf-8)
+  (setq locale-coding-system 'utf-8)
+#+END_SRC
+
+*** Mac settings
+I did a stupid mistake a long time ago when I started using Emacs on a
+Mac. I thought the command-key was a good fit for a meta. Now when I
+use Emacs or Emacs-like bindings anywhere else, I have to use
+option-key for meta, and in Emacs command-key. Well, here are the
+settings anyway with command as meta:
+
+#+BEGIN_SRC emacs-lisp
+  (if (eq system-type 'darwin)
+    (setq mac-pass-option-to-system t
+          mac-pass-control-to-system nil
+          mac-pass-command-to-system nil
+          mac-command-key-is-meta t
+          mac-command-modifier 'meta
+          mac-option-modifier nil
+          mac-control-modifier 'control))
+#+END_SRC
+
+Use Mac OSX default browser for urls:
+
+#+BEGIN_SRC emacs-lisp
+  (setq browse-url-browser-function 'browse-url-default-macosx-browser)
+#+END_SRC
+
+I don't like OSX native fullscreen mode, so if I wish to run Emacs in
+fullscreen-mode, then fake it rather than using native stuff:
+
+#+BEGIN_SRC emacs-lisp
+  (setq ns-use-native-fullscreen nil)
+#+END_SRC
+
+*** Keyboard
+I use this key for switching between windows in a single application
+on OSX, but Emacs eats the shortcut when I try to use the same
+shortcut for switching between frames:
+
+#+BEGIN_SRC emacs-lisp
+  (bind-key "M-`" 'other-frame)
+#+END_SRC
+
+I like to use meta+arrow for moving between windows:
+
+#+BEGIN_SRC emacs-lisp
+  (windmove-default-keybindings 'meta)
+#+END_SRC
+
+Setup better defaults for Emacs keybindings:
+
+#+BEGIN_SRC emacs-lisp
+  ;; Always reindent on newline
+  (bind-key "RET" 'newline-and-indent)
+
+  ;; Use regex searches by default.
+  (bind-key "C-s" 'isearch-forward-regexp)
+  (bind-key "C-r" 'isearch-backward-regexp)
+  (bind-key "C-M-s" 'isearch-forward)
+  (bind-key "C-M-r" 'isearch-backward)
+
+  (bind-key "C-o" 'isearch-occur isearch-mode-map)
+
+  ;; I want to use regexps by default with query-replace
+  (bind-key "M-%" 'query-replace-regexp)
+  (bind-key "C-M-%" 'query-replace)
+
+  ;; Help should search more than just commands
+  (bind-key "C-h a" 'apropos)
+#+END_SRC
+
+I use join-line a lot:
+
+#+BEGIN_SRC emacs-lisp
+  (bind-key "M-j" 'join-line)
+  (bind-key "<C-return>" 'rectangle-mark-mode)
+  (bind-key "C-c o" 'ff-find-other-file)
+#+END_SRC
+
+*** Vim-like
+I am used to Vim way of opening a line or zapping characters, here are
+some functions to make that happen:
+
+#+BEGIN_SRC emacs-lisp
+  (defun vj/open-line-after ()
+    (interactive)
+    (end-of-line)
+    (newline-and-indent))
+
+  (defun vj/zap-up-to-char (arg char)
+    "Zap up to a character."
+    (interactive "p\ncZap up to char: ")
+    (zap-to-char arg char)
+    (insert char)
+    (forward-char -1))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key "\C-o" 'vj/open-line-after)
+  (global-set-key (kbd "M-z") 'vj/zap-up-to-char)
+#+END_SRC
+
+*** Private
+Include private information outside of this repository:
+
+#+BEGIN_SRC emacs-lisp
+  (load "~/.emacs-private.el")
+#+END_SRC
+
+Example file:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (setq
+   message-send-mail-function 'smtpmail-send-it
+   user-full-name "Väinö Järvelä"
+   user-mail-address "vaino.jarvela@example.org"
+   message-signature "Väinö Järvelä"
+   smtpmail-default-smtp-server "smtp.example.org"
+   smtpmail-smtp-server "smtp.example.org"
+   smtpmail-smtp-service 587
+   smtpmail-local-domain "example.org"
+   smtpmail-starttls-credentials '(("smtp.example.org" 587 nil nil))
+
+   ;; if you need offline mode, set these -- and create the queue dir
+   ;; with 'mu mkdir', i.e.. mu mkdir /home/user/Maildir/queue
+   smtpmail-queue-mail  nil
+   smtpmail-queue-dir  "/Users/username/Maildir/queue/cur")
+#+END_SRC
+
+*** Backups
+
+Put backup files to temporary file directory:
+
+#+BEGIN_SRC emacs-lisp
+  (setq
+   backup-directory-alist `((".*" . "~/.emacs.d/backups"))
+   auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-save-list/" t)))
+#+END_SRC
+
+Save multiple versions of edited files. Uses some disk space, but who
+really cares?
+
+#+BEGIN_SRC emacs-lisp
+  (setq
+   version-control t
+   delete-old-versions -1
+   vc-make-backup-files t)
+#+END_SRC
+
+*** Extra editing
+**** Slickedit copy/paste
+#+BEGIN_SRC emacs-lisp
+  ;; Change cutting behaviour:
+  ;;  "Many times you'll do a kill-line command with the only intention of
+  ;;  getting the contents of the line into the killring. Here's an idea
+  ;;  stolen from Slickedit, if you press copy or cut when no region is
+  ;;  active you'll copy or cut the current line:"
+  ;;  <http://www.zafar.se/bkz/Articles/EmacsTips>
+  (defadvice kill-ring-save (before slickcopy activate compile)
+    "When called interactively with no active region, copy a single line instead."
+    (interactive
+     (if mark-active (list (region-beginning) (region-end))
+       (list (line-beginning-position)
+             (line-beginning-position 2)))))
+
+  (defadvice kill-region (before slickcut activate compile)
+    "When called interactively with no active region, kill a single line instead."
+    (interactive
+     (if mark-active (list (region-beginning) (region-end))
+       (list (line-beginning-position)
+             (line-beginning-position 2)))))
+#+END_SRC
+
+**** Smarter move beginning of line
+Copied from Sascha's configuration verbatim:
+
+Copied from http://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-beginning-of-a-line/
+
+#+BEGIN_SRC emacs-lisp
+  (defun sacha/smarter-move-beginning-of-line (arg)
+    "Move point back to indentation of beginning of line.
+
+  Move point to the first non-whitespace character on this line.
+  If point is already there, move to the beginning of the line.
+  Effectively toggle between the first non-whitespace character and
+  the beginning of the line.
+
+  If ARG is not nil or 1, move forward ARG - 1 lines first.  If
+  point reaches the beginning or end of the buffer, stop there."
+    (interactive "^p")
+    (setq arg (or arg 1))
+
+    ;; Move lines first
+    (when (/= arg 1)
+      (let ((line-move-visual nil))
+        (forward-line (1- arg))))
+
+    (let ((orig-point (point)))
+      (back-to-indentation)
+      (when (= orig-point (point))
+        (move-beginning-of-line 1))))
+
+  ;; remap C-a to `smarter-move-beginning-of-line'
+  (global-set-key [remap move-beginning-of-line]
+                  'sacha/smarter-move-beginning-of-line)
+#+END_SRC
+
+** Visual
+*** Basic settings
+Set background to dark:
+
+#+BEGIN_SRC emacs-lisp
+  (setq background-mode 'dark)
+#+END_SRC
+
+Remove all kinds of bars:
+
+#+BEGIN_SRC emacs-lisp
+  (menu-bar-mode -1)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+#+END_SRC
+
+I like to see empty lines in the buffer as a fringe on the left:
+
+#+BEGIN_SRC emacs-lisp
+  (setq indicate-buffer-boundaries 'left)
+  (set-default 'indicate-empty-lines t)
+#+END_SRC
+
+Show column number and buffer size in the modeline:
+
+#+BEGIN_SRC emacs-lisp
+  (column-number-mode t)
+  (size-indication-mode t)
+#+END_SRC
+
+Do not minimize Emacs on =c-z=
+(when (or window-system (daemonp))
+  (global-unset-key (kbd "C-z")))
+*** Modeline
+People seem to like modeline packages, we'll let's try one this
+year. This has to be defined before the theme below, otherwise the
+main theme colors will not be used for the modeline.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package smart-mode-line
+    :init (sml/setup))
+#+END_SRC
+
+*** Theme
+I have previously used [[https://github.com/bbatsov/zenburn-emacs][zenburn-theme]] which is excellent, but I'm
+switching away for just a while, to really show myself that I'm using
+a new Emacs configuration, at least for a while.
+
+As I'm basing some of the stuff from Jack Henahan's config, then why
+not try the theme he likes:
+
+#+BEGIN_SRC emacs-lisp
+  ;; Disabled load-theme advice for now, as it resets the theme
+  ;; when smart-mode-line is loadded.
+  ;;
+  ;; (defadvice load-theme
+  ;;   (before theme-dont-propagate activate)
+  ;;   (mapc #'disable-theme custom-enabled-themes))
+
+  (req-package moe-theme
+    :config
+    (progn
+      (moe-dark)
+      (set-face-attribute 'mode-line-buffer-id nil :inherit 'sml/filename :foreground "#303030" :background nil)
+      (set-face-attribute 'mode-line-inactive nil :foreground "#c6c6c6" :background "#6c6c6c" :inverse-video nil)
+      (set-face-attribute 'mode-line nil :foreground "#303030" :background "#afd7ff" :inverse-video nil)
+      (set-face-attribute 'sml/global nil :foreground "#303030" :inverse-video nil)
+      (set-face-attribute 'sml/modes nil :inherit 'sml/global :foreground "#303030")
+      (set-face-attribute 'sml/filename nil :inherit 'sml/global :foreground "#000000" :weight 'bold)
+      (set-face-attribute 'sml/modified nil :inherit 'sml/global :foreground "#a40000" :weight 'bold)
+      (set-face-attribute 'sml/prefix nil :inherit 'sml/global :foreground "#303030")
+      (set-face-attribute 'sml/read-only nil :inherit 'sml/not-modified :foreground "#303030")
+      (set-face-attribute 'sml/col-number nil :inherit 'sml/global)))
+#+END_SRC
+
+*** Font
+#+BEGIN_SRC emacs-lisp
+  (req-package faces
+    :config
+    (progn
+      (set-face-attribute 'default nil :family "Fantasque Sans Mono")
+      (set-face-attribute 'default nil :height 130)))
+#+END_SRC
+
+** Helm
+I like [[https://github.com/emacs-helm/helm][Helm]], even if it's a tad complicated. But the ecosystem is
+growing really fast, and even without any extra packages, it's quite
+enjoyable addition to Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package helm-config
+    :diminish (helm-mode . "")
+    :init
+    (progn
+      (setq
+       helm-idle-delay 0.1)
+      (setq helm-for-files-preferred-list
+            '(helm-source-buffers-list
+              helm-source-recentf
+              helm-source-bookmarks
+              helm-source-file-cache
+              helm-source-files-in-current-dir
+              helm-source-locate))
+      (bind-keys*
+        ("C-x C-f" . helm-find-files)
+        ("M-x" . helm-M-x)
+        ("C-h C-h" . helm-M-x)
+        ("C-x C-b" . helm-buffers-list)
+        ("\M-N" . helm-next-source)
+        ("\M-P" . helm-previous-source)
+        ("C-'" . helm-for-files)
+        ("C-h c" . helm-show-kill-ring)
+        ("C-h m" . helm-all-mark-rings)))
+    :config
+      (helm-mode t))
+#+END_SRC
+
+*** helm-descbinds-mode
+I love this mode, it allows me to quickly search commands and see
+their bindings at the same time.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package helm-descbinds
+    :require helm-config
+    :config (helm-descbinds-mode))
+#+END_SRC
+
+*** helm-swoop
+#+BEGIN_SRC emacs-lisp
+  (req-package helm-swoop
+    :require helm-config
+    :bind
+    (("M-i" . helm-swoop)
+     ("M-I" . helm-swoop-back-to-last-point)))
+#+END_SRC
+
+*** helm-ag
+#+BEGIN_SRC emacs-lisp
+  (req-package helm-ag
+    :require helm)
+#+END_SRC
+*** helm-ggtags
+#+BEGIN_SRC emacs-lisp
+  (req-package helm-gtags
+    :require (helm ggtags)
+    :config
+    (progn
+      (bind-keys
+       :map helm-gtags-mode-map
+       ("C-c g a" . helm-gtags-tags-in-this-function)
+       ("C-j" . helm-gtags-select)
+       ("M-." . helm-gtags-dwim)
+       ("M-," . helm-gtags-pop-stack)
+       ("C-c <" . helm-gtags-previous-history)
+       ("C-c >" . helm-gtags-next-history))
+      (add-hook 'dired-mode-hook 'helm-gtags-mode)
+      (add-hook 'eshell-mode-hook 'helm-gtags-mode)
+      (add-hook 'c-mode-hook 'helm-gtags-mode)
+      (add-hook 'c++-mode-hook 'helm-gtags-mode)
+      (add-hook 'asm-mode-hook 'helm-gtags-mode)))
+#+END_SRC
+** Programming
+*** General indentation and style
+Sadly tabs seems to have lost the indentation war. So let's just use
+spaces:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default indent-tabs-mode nil)
+#+END_SRC
+
+Indent with 4 spaces and set some default styles:
+
+#+BEGIN_SRC emacs-lisp
+  (setq c-default-style
+        '((java-mode . "java") (awk-mode . "awk") (other . "bsd"))
+        c-basic-offset 4)
+#+END_SRC
+
+*** Project support
+I haven't used =Projectile=, but let's see what the fuzz it about:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package projectile
+    :diminish projectile-mode
+    :require helm
+    :config
+    (progn
+      (setq
+       projectile-keymap-prefix (kbd "C-c p")
+       projectile-completion-system 'helm
+       projectile-enable-caching t
+       projectile-indexing-method 'alien)
+      (projectile-global-mode)))
+
+  (req-package helm-projectile
+    :require (projectile helm))
+#+END_SRC
+
+*** C and C++
+I like to use =subword-mode= in C -languages and I don't like when
+namespaces in C++ indents the block, as then all my code would be at
+indentation level 2.
+
+#+BEGIN_SRC emacs-lisp
+  (defun my-c-mode-setup ()
+    (subword-mode 1)
+    (c-set-offset 'innamespace 0))
+
+  (add-hook 'c-mode-common-hook 'my-c-mode-setup)
+#+END_SRC
+
+For autocomplete use [[https://github.com/Sarcasm/irony-mode][irony-mode]], as it seems to be quite lightweight,
+but still quite feature complete. =company-mode= can do completion
+quite well without =irony-mode= but with =irony-mode= we get better
+project support and other tools.
+
+To get =irony-mode= working, you have to run =irony-server-install=
+command, and have =libclang= installed on your system. On a Mac you
+can install =libclang= with:
+
+#+BEGIN_SRC sh
+  $ brew install llvm --with-clang
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (req-package irony
+    :config
+    (progn
+      (add-hook 'c++-mode-hook 'irony-mode)
+      (add-hook 'c-mode-hook 'irony-mode)
+      (add-hook 'objc-mode-hook 'irony-mode)
+      (defun my-irony-mode-hook ()
+        (define-key irony-mode-map [remap completion-at-point]
+          'irony-completion-at-point-async)
+        (define-key irony-mode-map [remap complete-symbol]
+          'irony-completion-at-point-async))
+      (add-hook 'irony-mode-hook 'my-irony-mode-hook)
+      (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)))
+#+END_SRC
+
+Autocomplete C headers with =company=. Needs some work for project
+paths. For now I have just added a single include path from my system
+to get C++ headers.
+
+To set user headers, see =company-c-headers-path-user=.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package company-c-headers
+    :require company
+    :config
+    (progn
+      (add-to-list 'company-c-headers-path-system "/usr/include/c++/4.2.1")
+      (add-to-list 'company-backends 'company-c-headers)))
+#+END_SRC
+
+Because =irony= mode can read compile options from multiple different
+project styles, it's convenient to use [[https://github.com/Sarcasm/flycheck-irony][flycheck-irony]] for =flycheck=.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package flycheck-irony
+    :require (flycheck irony)
+    :config (eval-after-load 'flycheck '(add-to-list 'flycheck-checkers 'irony)))
+#+END_SRC
+
+*** Javascript
+I don't do it a lot, and when I do, it's usually in IntelliJ IDEA, but
+here goes some untested configuration copied from around the
+globe. I'll adjust them as I end up in a project where I have to do
+more Javascript.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package js2-mode
+    :commands js2-mode
+    :mode "\\.js\\'")
+#+END_SRC
+*** Web development
+Try out =skewer-mode= for sending HTML, CSS and Javascript to browser.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package skewer-mode
+    :config (skewer-setup))
+#+END_SRC
+
+*** elisp
+**** edebug
+Use tracing with edebug, hit =T=:
+
+#+BEGIN_SRC emacs-lisp
+  (setq edebug-trace t)
+#+END_SRC
+
+**** eldoc
+#+BEGIN_SRC emacs-lisp
+  (req-package eldoc
+    :diminish eldoc-mode
+    :commands turn-on-eldoc-mode
+    :init
+    (progn
+      (add-hook 'emacs-lisp-mode-hook 'turn-on-eldoc-mode)
+      (add-hook 'lisp-interaction-mode-hook 'turn-on-eldoc-mode)))
+#+END_SRC
+
+**** Navigation
+#+BEGIN_SRC emacs-lisp
+  (bind-key "C-c ." 'find-function-at-point emacs-lisp-mode-map)
+#+END_SRC
+
+*** flycheck
+=Flycheck= is supposed to be a more modern =flymake=. So I'm going to
+try it out more this year.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package flycheck
+    :diminish (global-flycheck-mode)
+    :config
+    (progn
+      (add-hook 'after-init-hook #'global-flycheck-mode)
+      (add-hook 'c++-mode-hook (lambda () (setq flycheck-clang-language-standard "c++11")))))
+
+  (req-package helm-flycheck
+    :require (flycheck dash)
+    :commands helm-flycheck
+    :init
+    (bind-key "C-c ! h"
+              'helm-flycheck
+              flycheck-mode-map))
+#+END_SRC
+*** dash
+An interesting documentation lookup tool for Mac OSX.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package dash-at-point
+    :commands dash-at-point
+    :init (bind-key "C-c d" 'dash-at-point))
+#+END_SRC
+
+*** company (autocomplete)
+#+BEGIN_SRC emacs-lisp
+    (req-package company
+      :config
+      (progn
+        (bind-key "M-/" 'company-complete)
+        (add-hook 'prog-mode-hook 'company-mode)))
+#+END_SRC
+
+*** highlight-symbol
+Highlight the symbol the point is on.
+
+#+BEGIN_SRC emacs-lisp :tangle off
+  (req-package highlight-symbol
+    :config
+    (progn
+      (setq
+       highlight-symbol-on-navigation-p t
+       highlight-symbol-idle-delay 0.2)
+      (add-hook 'prog-mode-hook 'highlight-symbol-mode)))
+#+END_SRC
+
+*** whitespace
+I like to see mistakes with indentation clearly.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package whitespace
+    :config
+    (progn
+      (setq whitespace-style (quote (face indentation:space trailing tabs tab-mark)))
+      (global-whitespace-mode t)))
+#+END_SRC
+
+*** ggtags
+[[http://www.gnu.org/software/global/][GNU Global]] is a nice way to index projects. I use [[https://github.com/leoliu/ggtags][ggtags]] to use
+=Global= in Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package ggtags)
+#+END_SRC
+
+I'm not sure how to spread the logic of global tools like this. I'm
+really going to use =helm-gtags= to use =ggtags=, and I'm going to add
+per-language hooks for it.
+
+This time I'm going to setup =helm-gtags= where the other =helm= tools
+are: [[Helm]].
+
+** Packages
+*** magit
+=magit-filenotify= is disabled at the moment, as I don't have
+file-notify available on my Emacs at the moment.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package magit
+    :init
+    (bind-key* "C-x g" 'magit-status)
+    :config
+    (progn
+      (setq magit-save-some-buffers nil) ;don't ask to save buffers
+      (setq magit-set-upstream-on-push t) ;ask to set upstream
+      (setq magit-diff-refine-hunk t) ;show word-based diff for current hunk
+      ))
+  ;; (req-package magit-filenotify
+  ;;   :config
+  ;;   (progn
+  ;;     (require 'magit-filenotify)
+  ;;     (when (fboundp 'file-notify-add-watch)
+  ;;       (add-hook 'magit-status-mode-hook 'magit-filenotify-mode))))
+
+#+END_SRC
+*** calc-mode
+Some functions for using calc-graph stuff, with either SVG or terminal
+output:
+
+#+BEGIN_SRC emacs-lisp
+  (defun vj/calc-plot-set-svg ()
+    (interactive)
+    (setq calc-plot-svg-tempname (concat (make-temp-file "calcplot") ".svg"))
+    (calc-graph-set-command "output" (prin1-to-string calc-plot-svg-tempname))
+    (calc-graph-set-command "terminal" "svg")
+    (calc-graph-plot nil)
+    (shell-command (format "open \"%s\"" calc-plot-svg-tempname)))
+
+  (defun vj/calc-plot-set-default ()
+    (interactive)
+    (calc-graph-set-command "output" (prin1-to-string "STDOUT"))
+    (calc-graph-set-command "terminal" "dumb"))
+#+END_SRC
+
+On OSX change calc-roll-up M-tab to C-tab because of conflict:
+
+#+BEGIN_SRC emacs-lisp
+  (if (eq system-type 'darwin)
+      (require 'calc)
+      (add-hook 'calc-mode-hook
+                '(lambda ()
+                   (local-set-key [(control tab)] 'calc-roll-up))))
+#+END_SRC
+
+*** ace-jump-mode
+#+BEGIN_SRC emacs-lisp
+  (req-package ace-jump-mode
+    :init
+    (bind-keys*
+     ("C-c SPC" . ace-jump-mode)
+     ("C-x SPC" . ace-jump-mode-pop-mark))
+    :config (ace-jump-mode-enable-mark-sync))
+#+END_SRC
+
+*** smartparen
+I have had a bit of trouble with [[https://github.com/Fuco1/smartparens][smartparens]] outside of lispy stuff,
+but still it seems I cannot live without it anymore.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package smartparens
+    :diminish (smartparens-mode . "()")
+    :config
+    (progn
+      (require 'smartparens-config)
+      (smartparens-global-mode t)
+      (show-smartparens-global-mode t)
+      (sp-use-paredit-bindings)
+      (bind-keys :map sp-keymap
+                 ("C-{" . sp-select-previous-thing)
+                 ("C-}" . sp-select-next-thing)
+                 ("C-\\" . sp-select-previous-thing-exchange)
+                 ("C-]" . sp-select-next-thing-exchange)
+                 ("M-<up>" . nil)
+                 ("M-<down>" . nil))
+      (add-hook 'emacs-lisp-mode-hook 'smartparens-strict-mode)))
+#+END_SRC
+
+*** back-button
+Nice visual way of moving back and forth through mark-rings.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package back-button
+    :init
+    (bind-keys*
+     ("M--" . back-button-local-backward)
+     ("M-=" . back-button-local-forward))
+    :config
+    (progn
+      (setq back-button-local-keystrokes nil)
+      (back-button-mode t)))
+#+END_SRC
+
+*** diff-hl-mode
+Shows VC status at the left margin with a hook for =magit= to refresh
+the status when =magit= refreshes.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package diff-hl
+    :require magit
+    :config
+    (progn
+      (global-diff-hl-mode)
+      (diff-hl-margin-mode)
+      (defun stk/diff-hl-update ()
+        (with-current-buffer (current-buffer) (diff-hl-update)))
+      (add-hook 'magit-refresh-file-buffer-hook 'stk/diff-hl-update)))
+#+END_SRC
+
+*** uniquify
+I don't like the default buffer name uniquefier style, which appends
+directory at the end of a non-unique buffer name, e.g. ~foo<bar/quux>~
+and ~foo<something/else>~. So set the style to =forward=, which skips
+the greatest common denominator directory:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package uniquify
+    :config
+    (progn
+      (setq uniquify-buffer-name-style 'forward)
+      (setq uniquify-min-dir-content 2)))
+#+END_SRC
+
+*** expand-region
+This is a game changer of text editing in Emacs for me. In a way it
+replaces Vim's motion stuff for me, but visually.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package expand-region
+    :init
+    (bind-keys*
+     ("M-[" . er/contract-region)
+     ("M-]" . er/expand-region)))
+#+END_SRC
+
+*** multiple-cursors
+After getting used to this, I use it more often than search&replace
+facilities.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package multiple-cursors
+    :init
+    (bind-keys*
+     ("C-<" . mc/mark-previous-like-this)
+     ("C->" . mc/mark-next-like-this)
+     ("C-*" . mc/mark-all-like-this)))
+#+END_SRC
+
+*** move-text
+I use this all the time when using IntelliJ IDEA, but usually forget
+about it when in Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package move-text
+    :init
+    (bind-keys
+     ("M-S-<up>" . move-text-up)
+     ("M-S-<down>" . move-text-down)))
+#+END_SRC
+*** undo-tree
+*TODO* Don't save in the same directory
+Save undo-tree history and enable it globally:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package undo-tree
+    :config
+    (progn
+      (global-undo-tree-mode)
+      (setq undo-tree-auto-save-history t)
+      (defadvice undo-tree-make-history-save-file-name
+          (after undo-tree activate)
+        (setq ad-return-value (concat ad-return-value ".gz")))))
+#+END_SRC
+
+*** dired and dired+
+#+BEGIN_SRC emacs-lisp
+  (req-package dired
+    :config (setq dired-auto-revert-buffer t))
+
+  (req-package dired+
+    :requires dired
+    :config
+    (progn
+      (toggle-diredp-find-file-reuse-dir 1)
+      (setq diredp-hide-details-initially-flag nil)
+      (setq diredp-hide-details-propagate-flag nil)))
+#+END_SRC
+
+*** erc
+Just some basic settings for =erc=. I also require =tls= because I
+usually visit secure IRC servers.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package tls)
+  (req-package erc
+    :requires tls
+    :config
+    (progn
+      (add-hook 'erc-mode-hook (lambda ()
+                                 (erc-truncate-mode t)
+                                 (erc-fill-disable)
+                                 (set (make-local-variable 'scroll-conservatively) 1000)
+                                 (visual-line-mode)
+                                 ))
+      (setq erc-timestamp-format "%H:%M "
+            erc-fill-prefix "      "
+            erc-insert-timestamp-function 'erc-insert-timestamp-left
+            erc-interpret-mirc-color t
+            erc-kill-buffer-on-part t
+            erc-kill-queries-on-quit t
+            erc-kill-server-buffer-on-quit t
+            erc-server-send-ping-interval 45
+            erc-server-send-ping-timeout 180
+            erc-server-reconnect-timeout 60
+            erc-track-exclude-types '("JOIN" "NICK" "PART" "QUIT" "MODE"
+                                      "324" "329" "332" "333" "353" "477"))
+      (erc-track-mode t)))
+#+END_SRC
+
+*** gnutls
+I use some packages that requires =tls= support. Here's my local
+settings for =gnutls=:
+
+#+BEGIN_SRC emacs-lisp
+  (setq
+    starttls-use-gnutls t
+    starttls-gnutls-program "/usr/local/bin/gnutls-cli"
+    starttls-extra-arguments nil)
+#+END_SRC
+
+*** mu4e
+I read my email with [[http://www.djcbsoftware.nl/code/mu/mu4e.html][mu4e]] which has served me quite well for the last
+year, with just a few hitches when parsing a large HTML email and
+such. But I will still use it this year.
+
+The configuration here will be quite platform specific as it needs
+binaries and so on. Also I'm not going to use a local =mu4e=
+installation, so it's not gonna be fetched nor updated through package
+management in Emacs.
+
+Maybe I should try someday how the packaged version works, previously
+it didn't work on my Mac.
+
+#+BEGIN_SRC emacs-lisp
+  (when (file-exists-p "/usr/local/share/emacs/site-lisp/mu4e")
+  (add-to-list 'load-path "/usr/local/share/emacs/site-lisp/mu4e")
+  (autoload 'mu4e "mu4e" "Mail client based on mu (maildir-utils)." t)
+  (setq mu4e-mu-binary "/usr/local/bin/mu")
+
+  (require 'org-mu4e)
+  ;; enable inline images
+  (setq mu4e-view-show-images t)
+  ;; use imagemagick, if available
+  (when (fboundp 'imagemagick-register-types)
+    (imagemagick-register-types))
+  (setq mu4e-html2text-command "/usr/local/bin/html2text -nobs -width 72")
+  (setq mu4e-update-interval 60)
+  (setq mu4e-auto-retrieve-keys t)
+  (setq mu4e-headers-leave-behavior 'apply)
+  (setq mu4e-headers-visible-lines 20)
+  (setq mu4e-hide-index-messages t)
+
+  (setq mu4e-bookmarks
+        '(("flag:unread AND NOT flag:trashed" "Unread messages"      ?u)
+          ("date:today..now"                  "Today's messages"     ?t)
+          ("date:7d..now"                     "Last 7 days"          ?w)
+          ("flag:flagged"                     "Flagged"              ?f)
+          ("mime:image/*"                     "Messages with images" ?p)))
+
+  (add-hook 'mu4e-headers-mode-hook (lambda () (local-set-key (kbd "X") (lambda () (interactive) (mu4e-mark-execute-all t)))))
+  (add-hook 'mu4e-view-mode-hook
+            (lambda ()
+              (local-set-key (kbd "X") (lambda () (interactive) (mu4e-mark-execute-all t)))
+              (local-set-key (kbd "o") 'mu4e-view-open-attachment-try-single)
+              ))
+
+  (defun mu4e-headers-mark-all-unread-read ()
+    (interactive)
+    (mu4e~headers-mark-for-each-if
+     (cons 'read nil)
+     (lambda (msg param)
+       (memq 'unread (mu4e-msg-field msg :flags)))))
+
+  (defun mu4e-flag-all-read ()
+    (interactive)
+    (mu4e-headers-mark-all-unread-read)
+    (mu4e-mark-execute-all t)))
+
+  (defun mu4e-view-open-attachment-try-single (&optional msg attnum)
+    (interactive)
+    (let* ((count (hash-table-count mu4e~view-attach-map)) (def))
+      (when (zerop count) (mu4e-error "No attachments for this message"))
+      (if (= count 1)
+              (mu4e-view-open-attachment msg 1)
+            (mu4e-view-open-attachment msg))))
+#+END_SRC
+
+*** org
+org-mode is excellent, I just use it too little.
+
+#+BEGIN_SRC emacs-lisp
+    (req-package org
+      :config
+      (progn
+        (add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
+        (setq org-startup-folded t
+              org-startup-with-inline-images t
+              org-startup-truncated t
+              org-agenda-start-with-log-mode t
+              org-directory "~/Documents/org"
+              org-default-notes-file (concat org-directory "/notes.org")
+              org-replace-disputed-keys t)))
+#+END_SRC
+
+*** winner-mode
+Let's me undo and redo window configurations.
+
+#+BEGIN_SRC emacs-lisp
+  (winner-mode t)
+#+END_SRC
+
+*** ediff
+The default configuration is horrible for window configurations. I
+really don't want any package to create new frames for me. And I
+usually split my display vertically, so use horizontal splits.
+
+Also add a hook that saves and restores window configurations when I'm
+done with =ediff=.
+
+#+BEGIN_SRC emacs-lisp
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  (setq ediff-split-window-function 'split-window-horizontally)
+
+  (add-hook 'ediff-load-hook
+            (lambda ()
+              (add-hook 'ediff-before-setup-hook
+                        (lambda ()
+                          (setq ediff-saved-window-configuration (current-window-configuration))))
+              (let ((restore-window-configuration
+                     (lambda ()
+                       (set-window-configuration ediff-saved-window-configuration))))
+                (add-hook 'ediff-quit-hook restore-window-configuration 'append)
+                (add-hook 'ediff-suspend-hook restore-window-configuration 'append))))
+#+END_SRC
+
+*** eshell
+#+BEGIN_SRC emacs-lisp
+  (req-package eshell
+    :config
+    (progn
+      (bind-keys
+       ("C-x m" . eshell)
+       ("C-x M" . (lambda () (interactive) (eshell t))))))
+#+END_SRC
+
+* Fulfill Requirements
+
+This has to be run to actually run =req-package= stuff.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package-finish)
+#+END_SRC
+
+* Emacs Server
+#+BEGIN_SRC emacs-lisp
+  (server-start)
+#+END_SRC
+
+* Footnotes
+
+[fn:1] Chapter paraphrased from Jack Henahan's config
+
+
