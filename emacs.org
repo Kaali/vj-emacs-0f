@@ -771,6 +771,14 @@ Try out =skewer-mode= for sending HTML, CSS and Javascript to browser.
 #+END_SRC
 
 *** elisp
+**** elisp
+I don't like to have =checkdoc= warning in elisp with =flycheck=
+
+#+BEGIN_SRC emacs-lisp
+  (with-eval-after-load 'flycheck
+    (setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc)))
+#+END_SRC
+
 **** edebug
 Use tracing with edebug, hit =T=:
 
