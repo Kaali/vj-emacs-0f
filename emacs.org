@@ -465,6 +465,18 @@ Copied from http://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-begi
                   'sacha/smarter-move-beginning-of-line)
 #+END_SRC
 
+**** cycle spacing
+This requires a bit newer emacs version. It allows you to cycle
+between three different whitespace amount around a point:
+
+1. Delete all but one space
+2. Delete all space
+3. Keep original spaces
+
+#+BEGIN_SRC emacs-lisp
+  (bind-key* "C-M-SPC" 'cycle-spacing)
+#+END_SRC
+
 ** Visual
 *** Basic settings
 Set background to dark:
