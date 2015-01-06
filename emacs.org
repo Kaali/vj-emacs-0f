@@ -983,8 +983,9 @@ the status when =magit= refreshes.
       (global-diff-hl-mode)
       (diff-hl-margin-mode)
       (defun stk/diff-hl-update ()
-        (with-current-buffer (current-buffer) (diff-hl-update)))
-      (add-hook 'magit-refresh-file-buffer-hook 'stk/diff-hl-update)))
+        (when (buffer-file-name)
+          (with-current-buffer (current-buffer) (diff-hl-update))))
+      (add-hook 'magit-revert-buffer-hook 'stk/diff-hl-update)))
 #+END_SRC
 
 *** uniquify
