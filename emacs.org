@@ -729,6 +729,16 @@ project styles, it's convenient to use [[https://github.com/Sarcasm/flycheck-iro
     :config (eval-after-load 'flycheck '(add-to-list 'flycheck-checkers 'irony)))
 #+END_SRC
 
+There is also =irony-eldoc= for seeing function interfaces when you
+place the point on top of a function. It can only understand overloads
+by arity, but it's better than nothing.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package irony-eldoc
+    :require (irony eldoc)
+    :config (add-hook 'irony-mode-hook 'irony-eldoc))
+#+END_SRC
+
 *** Javascript
 I don't do it a lot, and when I do, it's usually in IntelliJ IDEA, but
 here goes some untested configuration copied from around the
