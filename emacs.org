@@ -254,8 +254,6 @@ splitting the active window:
 I want utf-8:
 
 #+BEGIN_SRC emacs-lisp
-  (set-terminal-coding-system 'utf-8)
-  (set-keyboard-coding-system 'utf-8)
   (set-language-environment "UTF-8")
   (prefer-coding-system 'utf-8)
   (setq locale-coding-system 'utf-8)
