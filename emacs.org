@@ -591,6 +591,9 @@ enjoyable addition to Emacs.
         (funcall define-search "ack")
         (funcall define-search "ack-grep"))
 
+      (when (eq system-type 'darwin)
+        (setq helm-locate-command "mdfind %s -name %s"))
+
       (bind-keys*
         ("C-x C-f" . helm-find-files)
         ("M-x" . helm-M-x)
