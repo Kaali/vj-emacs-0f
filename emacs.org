@@ -595,6 +595,7 @@ enjoyable addition to Emacs.
         (setq helm-locate-command "mdfind %s -name %s"))
 
       (bind-keys*
+        ("C-c h" . helm-command-prefix)
         ("C-x C-f" . helm-find-files)
         ("M-x" . helm-M-x)
         ("C-h C-h" . helm-M-x)
