@@ -731,6 +731,11 @@ can install =libclang= with:
           'irony-completion-at-point-async))
       (add-hook 'irony-mode-hook 'my-irony-mode-hook)
       (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)))
+
+  (req-package company-irony
+    :require (company irony)
+    :config
+    (eval-after-load 'company '(add-to-list 'company-backends 'company-irony)))
 #+END_SRC
 
 Autocomplete C headers with =company=. Needs some work for project
