@@ -546,7 +546,9 @@ not try the theme he likes:
       (set-face-attribute 'sml/modified nil :inherit 'sml/global :foreground "#a40000" :weight 'bold)
       (set-face-attribute 'sml/prefix nil :inherit 'sml/global :foreground "#303030")
       (set-face-attribute 'sml/read-only nil :inherit 'sml/not-modified :foreground "#303030")
-      (set-face-attribute 'sml/col-number nil :inherit 'sml/global)))
+      (set-face-attribute 'sml/col-number nil :inherit 'sml/global)
+      (set-face-attribute 'helm-grep-finish nil :inherit 'sml/global :foreground "#303030")
+      (set-face-attribute 'helm-grep-cmd-line nil :inherit 'sml/global :foreground "#303030")))
 #+END_SRC
 
 *** Font
