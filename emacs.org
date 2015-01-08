@@ -483,10 +483,12 @@ Set background to dark:
   (setq background-mode 'dark)
 #+END_SRC
 
-Remove all kinds of bars:
+Remove all kinds of bars, except for the menu-bar on OSX:
 
 #+BEGIN_SRC emacs-lisp
-  (menu-bar-mode -1)
+  (if (eq system-type 'darwin)
+      (menu-bar-mode 1)
+    (menu-bar-mode -1))
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
 #+END_SRC
