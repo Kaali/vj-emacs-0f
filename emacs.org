@@ -792,6 +792,19 @@ Try out =skewer-mode= for sending HTML, CSS and Javascript to browser.
 #+END_SRC
 
 *** elisp
+*** glsl
+#+BEGIN_SRC emacs-lisp
+  (req-package glsl-mode
+    :config
+    (progn
+      (add-to-list 'auto-mode-alist '("\\.vs\\'" . glsl-mode))
+      (add-to-list 'auto-mode-alist '("\\.fs\\'" . glsl-mode))
+      (add-to-list 'auto-mode-alist '("\\.glsl\\'" . glsl-mode))
+      (add-to-list 'auto-mode-alist '("\\.vert\\'" . glsl-mode))
+      (add-to-list 'auto-mode-alist '("\\.frag\\'" . glsl-mode))
+      (add-to-list 'auto-mode-alist '("\\.geom\\'" . glsl-mode))))
+#+END_SRC
+
 **** elisp
 I don't like to have =checkdoc= warning in elisp with =flycheck=
 
