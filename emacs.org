@@ -1176,6 +1176,8 @@ it didn't work on my Mac.
           ("date:7d..now"                     "Last 7 days"          ?w)
           ("flag:flagged"                     "Flagged"              ?f)
           ("mime:image/*"                     "Messages with images" ?p)))
+  (when private-mu4e-bookmarks
+    (setq mu4e-bookmarks (append mu4e-bookmarks private-mu4e-bookmarks)))
 
   (add-hook 'mu4e-headers-mode-hook (lambda () (local-set-key (kbd "X") (lambda () (interactive) (mu4e-mark-execute-all t)))))
   (add-hook 'mu4e-view-mode-hook
