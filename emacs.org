@@ -1,5 +1,6 @@
 #+TITLE: Emacs configuration for 2015
 #+AUTHOR: Väinö Järvelä
+#+OPTIONS: toc:4 h:4
 
 * Intro
 
@@ -581,6 +582,7 @@ enjoyable addition to Emacs.
               helm-source-files-in-current-dir
               helm-source-locate))
 
+      ;; I use ack for finding stuff in Helm, but the command can be ack or ack-grep
       (let ((file-cmd " -Hn --no-group --no-color %e %p %f f")
             (recurse-cmd " -H --no-group --no-color %e %p %f")
             (define-search
@@ -634,6 +636,7 @@ their bindings at the same time.
   (req-package helm-ag
     :require helm)
 #+END_SRC
+
 *** helm-ggtags
 #+BEGIN_SRC emacs-lisp
   (req-package helm-gtags
