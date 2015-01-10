@@ -724,9 +724,12 @@ can install =libclang= with:
   (req-package irony
     :config
     (progn
-      (add-hook 'c++-mode-hook 'irony-mode)
-      (add-hook 'c-mode-hook 'irony-mode)
-      (add-hook 'objc-mode-hook 'irony-mode)
+      (defun c-irony-mode-hook
+          (when (member major-mode irony-known-modes)
+            (irony-mode t)))
+      (add-hook 'c++-mode-hook 'c-irony-mode-hook)
+      (add-hook 'c-mode-hook 'c-irony-mode-hook)
+      (add-hook 'objc-mode-hook 'c-irony-mode-hook)
       (defun my-irony-mode-hook ()
         (define-key irony-mode-map [remap completion-at-point]
           'irony-completion-at-point-async)
