@@ -836,6 +836,19 @@ Or you can get it from =homebrew= with:
     :require (flycheck glsl-mode))
 #+END_SRC
 
+Also use my [[https://github.com/Kaali/company-glsl][company-glsl]] package for =company-mode= support:
+
+#+BEGIN_SRC emacs-lisp
+  (plist-put
+   req-quelpa-sources
+   'company-glsl '(company-glsl :repo "Kaali/company-glsl" :fetcher github))
+
+  (req-package company-glsl
+    :require (company glsl-mode)
+    :config (add-to-list 'company-backends 'company-glsl))
+
+#+END_SRC
+
 **** elisp
 I don't like to have =checkdoc= warning in elisp with =flycheck=
 
