@@ -249,6 +249,13 @@ splitting the active window:
   (setq window-combination-resize t)
 #+END_SRC
 
+Tuck undo files safely away:
+
+#+BEGIN_SRC emacs-lisp
+  (setq undo-tree-auto-save-history t
+        undo-tree-history-directory-alist `(("." . ,(expand-file-name "~/.emacs-undo/"))))
+#+END_SRC
+
 *** Locale
 I want utf-8:
 
