@@ -731,7 +731,7 @@ can install =libclang= with:
     :config
     (progn
       (defun c-irony-mode-hook
-          (when (member major-mode irony-known-modes)
+          (when (member major-mode irony-supported-major-modes)
             (irony-mode t)))
       (add-hook 'c++-mode-hook 'c-irony-mode-hook)
       (add-hook 'c-mode-hook 'c-irony-mode-hook)
