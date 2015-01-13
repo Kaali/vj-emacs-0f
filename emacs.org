@@ -784,6 +784,12 @@ by arity, but it's better than nothing.
     :config (add-hook 'irony-mode-hook 'irony-eldoc))
 #+END_SRC
 
+For editing CMake files:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package cmake-mode)
+#+END_SRC
+
 *** Javascript
 I don't do it a lot, and when I do, it's usually in IntelliJ IDEA, but
 here goes some untested configuration copied from around the
