@@ -532,30 +532,31 @@ As I'm basing some of the stuff from Jack Henahan's config, then why
 not try the theme he likes:
 
 #+BEGIN_SRC emacs-lisp
-  ;; Disabled load-theme advice for now, as it resets the theme
-  ;; when smart-mode-line is loadded.
-  ;;
-  ;; (defadvice load-theme
-  ;;   (before theme-dont-propagate activate)
-  ;;   (mapc #'disable-theme custom-enabled-themes))
+    ;; Disabled load-theme advice for now, as it resets the theme
+    ;; when smart-mode-line is loadded.
+    ;;
+    ;; (defadvice load-theme
+    ;;   (before theme-dont-propagate activate)
+    ;;   (mapc #'disable-theme custom-enabled-themes))
 
-  (req-package moe-theme
-    :config
-    (progn
-      (moe-dark)
-      (set-face-attribute 'mode-line-buffer-id nil :inherit 'sml/filename :foreground "#303030" :background nil)
-      (set-face-attribute 'mode-line-inactive nil :foreground "#c6c6c6" :background "#6c6c6c" :inverse-video nil)
-      (set-face-attribute 'mode-line nil :foreground "#303030" :background "#afd7ff" :inverse-video nil)
-      (set-face-attribute 'sml/global nil :foreground "#303030" :inverse-video nil)
-      (set-face-attribute 'sml/modes nil :inherit 'sml/global :foreground "#303030")
-      (set-face-attribute 'sml/filename nil :inherit 'sml/global :foreground "#000000" :weight 'bold)
-      (set-face-attribute 'sml/modified nil :inherit 'sml/global :foreground "#a40000" :weight 'bold)
-      (set-face-attribute 'sml/prefix nil :inherit 'sml/global :foreground "#303030")
-      (set-face-attribute 'sml/read-only nil :inherit 'sml/not-modified :foreground "#303030")
-      (set-face-attribute 'sml/col-number nil :inherit 'sml/global)
-      (set-face-attribute 'helm-grep-finish nil :inherit 'sml/global :foreground "#303030")
-      (set-face-attribute 'helm-grep-cmd-line nil :inherit 'sml/global :foreground "#303030")
-      (set-face-attribute 'helm-ff-executable nil :foreground "#a1db00")))
+    (req-package moe-theme
+      :require helm-config
+      :config
+      (progn
+        (moe-dark)
+        (set-face-attribute 'mode-line-buffer-id nil :inherit 'sml/filename :foreground "#303030" :background nil)
+        (set-face-attribute 'mode-line-inactive nil :foreground "#c6c6c6" :background "#6c6c6c" :inverse-video nil)
+        (set-face-attribute 'mode-line nil :foreground "#303030" :background "#afd7ff" :inverse-video nil)
+        (set-face-attribute 'sml/global nil :foreground "#303030" :inverse-video nil)
+        (set-face-attribute 'sml/modes nil :inherit 'sml/global :foreground "#303030")
+        (set-face-attribute 'sml/filename nil :inherit 'sml/global :foreground "#000000" :weight 'bold)
+        (set-face-attribute 'sml/modified nil :inherit 'sml/global :foreground "#a40000" :weight 'bold)
+        (set-face-attribute 'sml/prefix nil :inherit 'sml/global :foreground "#303030")
+        (set-face-attribute 'sml/read-only nil :inherit 'sml/not-modified :foreground "#303030")
+        (set-face-attribute 'sml/col-number nil :inherit 'sml/global)
+        (set-face-attribute 'helm-grep-finish nil :inherit 'sml/global :foreground "#303030")
+        (set-face-attribute 'helm-grep-cmd-line nil :inherit 'sml/global :foreground "#303030")
+        (set-face-attribute 'helm-ff-executable nil :foreground "#a1db00")))
 #+END_SRC
 
 *** Font
