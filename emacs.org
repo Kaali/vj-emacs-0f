@@ -680,6 +680,32 @@ Indent with 4 spaces and set some default styles:
         c-basic-offset 4)
 #+END_SRC
 
+*** Compilation
+By default Emacs sticks to the bottom of the compilation buffer only
+if the user buts the point at the bottom.
+
+Automatic scrolling can be enabled with:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (setq compilation-scroll-output t)
+#+END_SRC
+
+But I like it more that it stops at the first error with:
+
+#+BEGIN_SRC emacs-lisp
+  (setq compilation-scroll-output 'first-error)
+#+END_SRC
+
+I usually use multiple frames to split my display. So please don't
+open more than one compilation buffer:
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list
+   'display-buffer-alist
+   '("\\*compilation\\*" display-buffer-reuse-window
+     (reusable-frames . t)))
+#+END_SRC
+
 *** Project support
 I haven't used =Projectile=, but let's see what the fuzz it about:
 
