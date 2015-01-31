@@ -745,7 +745,7 @@ but still quite feature complete. =company-mode= can do completion
 quite well without =irony-mode= but with =irony-mode= we get better
 project support and other tools.
 
-To get =irony-mode= working, you have to run =irony-server-install=
+To get =irony-mode= working, you have to run =irony-install-server=
 command, and have =libclang= installed on your system. On a Mac you
 can install =libclang= with:
 
