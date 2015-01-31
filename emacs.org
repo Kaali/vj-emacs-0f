@@ -659,8 +659,6 @@ their bindings at the same time.
        ("C-c >" . helm-gtags-next-history))
       (add-hook 'dired-mode-hook 'helm-gtags-mode)
       (add-hook 'eshell-mode-hook 'helm-gtags-mode)
-      (add-hook 'c-mode-hook 'helm-gtags-mode)
-      (add-hook 'c++-mode-hook 'helm-gtags-mode)
       (add-hook 'asm-mode-hook 'helm-gtags-mode)))
 #+END_SRC
 ** Programming
@@ -740,6 +738,78 @@ indentation level 2.
   (add-hook 'c-mode-common-hook 'my-c-mode-setup)
 #+END_SRC
 
+**** RTags
+=irony-mode= has not been a complete success for me, with a lot of
+timeouts or just not understanding other than basic method or function
+lookup. It's quite nice and easy to setup, but it leaves me wanting
+more. So I'm going to try out [[https://github.com/Andersbakken/rtags][rtags]] which is a more complete C++
+system, which provides autocomplete, diagnostics, refactoring and
+navigation.
+
+The problem is that it's a bit more complicated to setup, and tool
+support seems to be a bit lacking vs. separate tools such as
+=irony-mode= and =gtags=.
+
+The configuration below works, but it's only partially integrated with
+=helm=. And I have a untested mapping with navigation that uses
+=gtags= if =rtags= is not available.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package rtags
+    :require auto-complete company helm-gtags
+    :init (rtags-enable-standard-keybindings c-mode-base-map)
+    :config
+    (progn
+      (setq rtags-completions-enabled t)
+      (require 'company-rtags)
+      (eval-after-load 'company '(add-to-list 'company-backends 'company-rtags))
+
+      (defun use-rtags (&optional useFileManager)
+        (and (rtags-executable-find "rc")
+             (cond ;((not (gtags-get-rootpath)) t)
+                   ((and (not (eq major-mode 'c++-mode))
+                         (not (eq major-mode 'c-mode))) (rtags-has-filemanager))
+                   (useFileManager (rtags-has-filemanager))
+                   (t (rtags-is-indexed)))))
+
+      (defun tags-find-symbol-at-point (&optional prefix)
+        (interactive "P")
+        (if (and (not (rtags-find-symbol-at-point prefix)) rtags-last-request-not-indexed)
+            (helm-gtags-find-tag)))
+      (defun tags-find-references-at-point (&optional prefix)
+        (interactive "P")
+        (if (and (not (rtags-find-references-at-point prefix)) rtags-last-request-not-indexed)
+            (helm-gtags-find-rtag)))
+      (defun tags-find-symbol ()
+        (interactive)
+        (call-interactively (if (use-rtags) 'rtags-find-symbol 'helm-gtags-find-symbol)))
+      (defun tags-find-references ()
+        (interactive)
+        (call-interactively (if (use-rtags) 'rtags-find-references 'helm-gtags-find-rtag)))
+      (defun tags-find-file ()
+        (interactive)
+        (call-interactively (if (use-rtags t) 'rtags-find-file 'helm-gtags-find-files)))
+      (defun tags-imenu ()
+        (interactive)
+        (call-interactively (if (use-rtags t) 'rtags-imenu 'idomenu)))
+      (defun tags-previous ()
+        (interactive)
+        (call-interactively (if (use-rtags t) 'rtags-location-stack-back 'helm-gtags-previous-history)))
+
+      (bind-keys
+       :map c-mode-base-map
+       ("M-." . tags-find-symbol-at-point)
+       ("M-," . tags-previous)
+       ("C-." . tags-find-symbol)
+       ("C-," . tags-find-references)
+       ("C-c <" . rtags-previous-match)
+       ("C-c >" . rtags-next-match)
+       ("C-<left>" . rtags-previous-match)
+       ("C-<right>" . rtags-next-match)
+       ("C-\\" . rtags-display-summary))))
+#+END_SRC
+
+**** Irony
 For autocomplete use [[https://github.com/Sarcasm/irony-mode][irony-mode]], as it seems to be quite lightweight,
 but still quite feature complete. =company-mode= can do completion
 quite well without =irony-mode= but with =irony-mode= we get better
@@ -753,7 +823,7 @@ can install =libclang= with:
   $ brew install llvm --with-clang
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle off
   (req-package irony
     :config
     (progn
@@ -795,7 +865,7 @@ To set user headers, see =company-c-headers-path-user=.
 Because =irony= mode can read compile options from multiple different
 project styles, it's convenient to use [[https://github.com/Sarcasm/flycheck-irony][flycheck-irony]] for =flycheck=.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle off
   (req-package flycheck-irony
     :require (flycheck irony)
     :config (eval-after-load 'flycheck '(add-to-list 'flycheck-checkers 'irony)))
@@ -805,12 +875,13 @@ There is also =irony-eldoc= for seeing function interfaces when you
 place the point on top of a function. It can only understand overloads
 by arity, but it's better than nothing.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle off
   (req-package irony-eldoc
     :require (irony eldoc)
     :config (add-hook 'irony-mode-hook 'irony-eldoc))
 #+END_SRC
 
+**** CMake
 For editing CMake files:
 
 #+BEGIN_SRC emacs-lisp
@@ -1095,10 +1166,12 @@ but still it seems I cannot live without it anymore.
       (show-smartparens-global-mode t)
       (sp-use-paredit-bindings)
       (bind-keys :map sp-keymap
-                 ("C-{" . sp-select-previous-thing)
-                 ("C-}" . sp-select-next-thing)
-                 ("C-\\" . sp-select-previous-thing-exchange)
-                 ("C-]" . sp-select-next-thing-exchange)
+                 ;("C-{" . sp-select-previous-thing)
+                 ;("C-}" . sp-select-next-thing)
+                 ;("C-\\" . sp-select-previous-thing-exchange)
+                 ;("C-]" . sp-select-next-thing-exchange)
+                 ("C-<left>" . nil)
+                 ("C-<right>" . nil)
                  ("M-<up>" . nil)
                  ("M-<down>" . nil))
       (add-hook 'emacs-lisp-mode-hook 'smartparens-strict-mode)))
