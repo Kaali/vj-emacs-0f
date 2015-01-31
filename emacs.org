@@ -720,6 +720,7 @@ I haven't used =Projectile=, but let's see what the fuzz it about:
        projectile-completion-system 'helm
        projectile-enable-caching t
        projectile-indexing-method 'alien)
+      (bind-key "M-p" projectile-command-map)
       (projectile-global-mode)))
 
   (req-package helm-projectile
