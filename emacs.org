@@ -991,6 +991,34 @@ per-language hooks for it.
 This time I'm going to setup =helm-gtags= where the other =helm= tools
 are: [[Helm]].
 
+*** Ergonomics
+I'm looking at developing better habits with my typing in Emacs. There
+are some really bad shortcuts which requires stretching of the
+fingers, and some functions I use all the time, but still requires a
+lot of keypresses.
+
+Examples of often used bad shortcuts:
+
+- C-x C-s for saving
+- C-x C-f and C-x C-b for switching files and buffer. Mitigated a bit
+  by my C-'
+- C-c p xxx for all the projectile stuff I have been testing. It's
+  really not good to switch files with C-p h and compile them with
+  C-c p c <RET>
+
+There is [[http://ergoemacs.org/][Ergoemacs]], but that seems a bit much for me for now.
+
+So the first step is to record my key frequency, for that I will use
+the following package:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package keyfreq
+    :config
+    (progn
+      (keyfreq-mode t)
+      (keyfreq-autosave-mode t)))
+#+END_SRC
+
 ** Packages
 *** magit
 =magit-filenotify= is disabled at the moment, as I don't have
