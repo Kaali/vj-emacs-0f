@@ -722,7 +722,8 @@ I haven't used =Projectile=, but let's see what the fuzz it about:
       (projectile-global-mode)))
 
   (req-package helm-projectile
-    :require (projectile helm))
+    :require (projectile helm)
+    :config (bind-keys ("M-'" . helm-projectile)))
 #+END_SRC
 
 *** C and C++
