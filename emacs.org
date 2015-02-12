@@ -907,7 +907,6 @@ Try out =skewer-mode= for sending HTML, CSS and Javascript to browser.
     :config (skewer-setup))
 #+END_SRC
 
-*** elisp
 *** glsl
 #+BEGIN_SRC emacs-lisp
   (req-package glsl-mode
@@ -954,7 +953,7 @@ Also use my [[https://github.com/Kaali/company-glsl][company-glsl]] package for 
 
 #+END_SRC
 
-**** elisp
+*** elisp
 I don't like to have =checkdoc= warning in elisp with =flycheck=
 
 #+BEGIN_SRC emacs-lisp
@@ -980,7 +979,7 @@ Use tracing with edebug, hit =T=:
       (add-hook 'lisp-interaction-mode-hook 'turn-on-eldoc-mode)))
 #+END_SRC
 
-**** Navigation
+*** Navigation
 #+BEGIN_SRC emacs-lisp
   (bind-key "C-c ." 'find-function-at-point emacs-lisp-mode-map)
 #+END_SRC
@@ -1062,7 +1061,7 @@ per-language hooks for it.
 This time I'm going to setup =helm-gtags= where the other =helm= tools
 are: [[Helm]].
 
-*** Ergonomics
+** Ergonomics
 I'm looking at developing better habits with my typing in Emacs. There
 are some really bad shortcuts which requires stretching of the
 fingers, and some functions I use all the time, but still requires a
