@@ -764,6 +764,12 @@ The configuration below works, but it's only partially integrated with
       (require 'company-rtags)
       (eval-after-load 'company '(add-to-list 'company-backends 'company-rtags))
 
+      ;; Override this function from rtags, it's broken there.
+      (eval-after-load 'rtags
+        '(defun rtags-goto-line-col (line column)
+           (goto-line line)
+           (move-to-column (1- column))))
+
       (defun use-rtags (&optional useFileManager)
         (and (rtags-executable-find "rc")
              (cond ;((not (gtags-get-rootpath)) t)
@@ -794,7 +800,7 @@ The configuration below works, but it's only partially integrated with
         (call-interactively (if (use-rtags t) 'rtags-imenu 'idomenu)))
       (defun tags-previous ()
         (interactive)
-        (call-interactively (if (use-rtags t) 'rtags-location-stack-back 'helm-gtags-previous-history)))
+        (call-interactively (if (use-rtags) 'rtags-location-stack-back 'helm-gtags-previous-history)))
 
       (bind-keys
        :map c-mode-base-map
