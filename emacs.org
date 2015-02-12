@@ -1088,6 +1088,23 @@ the following package:
       (keyfreq-mode t)
       (keyfreq-autosave-mode t)))
 #+END_SRC
+*** Key chords
+I tried key chording once, and I had some trouble with it, because I
+type fast enough so I had to slow down the speed to 0.02, which again
+is so fast that sometimes I couldn't activate my commands.
+
+Now I'm trying it again, but I have to be more careful in what chords
+to setup, so launching commands by accident will be really rare.
+
+#+BEGIN_SRC emacs-lisp
+      (req-package key-chord
+        :config
+        (progn
+          (key-chord-mode t)
+          (setq key-chord-two-keys-delay 0.1)
+          (setq key-chord-one-key-delay 0.2)
+          (key-chord-define-global "jj" 'ace-jump-mode)))
+#+END_SRC
 
 ** Packages
 *** magit
