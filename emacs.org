@@ -564,8 +564,8 @@ not try the theme he likes:
   (req-package faces
     :config
     (progn
-      (set-face-attribute 'default nil :family "Fantasque Sans Mono")
-      (set-face-attribute 'default nil :height 130)))
+      (set-face-attribute 'default nil :family "Input")
+      (set-face-attribute 'default nil :height 120)))
 #+END_SRC
 
 ** Helm
@@ -734,7 +734,7 @@ indentation level 2.
 #+BEGIN_SRC emacs-lisp
   (defun my-c-mode-setup ()
     (subword-mode 1)
-    (c-set-offset 'innamespace 0))
+    (c-set-offset 'innamespace 4))
 
   (add-hook 'c-mode-common-hook 'my-c-mode-setup)
 #+END_SRC
@@ -904,7 +904,8 @@ more Javascript.
 #+BEGIN_SRC emacs-lisp
   (req-package js2-mode
     :commands js2-mode
-    :mode "\\.js\\'")
+    :mode "\\.js\\'"
+    :config (setq js2-basic-offset 2))
 #+END_SRC
 *** Web development
 Try out =skewer-mode= for sending HTML, CSS and Javascript to browser.
@@ -1126,7 +1127,12 @@ file-notify available on my Emacs at the moment.
     (progn
       (setq magit-save-some-buffers nil) ;don't ask to save buffers
       (setq magit-set-upstream-on-push t) ;ask to set upstream
-      (setq magit-diff-refine-hunk t) ;show word-based diff for current hunk
+      ;; Performance testing below
+      (setq magit-highlight-whitespace nil)
+      (setq magit-highlight-trailing-whitespace nil)
+      (setq magit-highlight-indentation nil)
+      (setq magit-diff-refine-hunk nil) ;show word-based diff for current hunk
+      (setq magit-backup-mode nil)
       ))
   ;; (req-package magit-filenotify
   ;;   :config
@@ -1426,17 +1432,34 @@ it didn't work on my Mac.
 org-mode is excellent, I just use it too little.
 
 #+BEGIN_SRC emacs-lisp
-    (req-package org
-      :config
-      (progn
-        (add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
-        (setq org-startup-folded t
-              org-startup-with-inline-images t
-              org-startup-truncated t
-              org-agenda-start-with-log-mode t
-              org-directory "~/Documents/org"
-              org-default-notes-file (concat org-directory "/notes.org")
-              org-replace-disputed-keys t)))
+  (req-package org
+    :bind (("C-c a" . org-agenda))
+    :config
+    (progn
+      (add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
+      (setq org-startup-folded t
+            org-startup-with-inline-images t
+            org-startup-truncated t
+            org-agenda-start-with-log-mode t
+            org-directory "~/Documents/org"
+            org-default-notes-file (concat org-directory "/notes.org")
+            org-replace-disputed-keys t
+            org-hide-emphasis-markers t)
+      (font-lock-add-keywords 'org-mode
+                          '(("^ +\\([-*]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+      (add-hook 'org-mode-hook
+                '(lambda ()
+                   (local-unset-key [(meta down)])
+                   (local-unset-key [(meta up)])
+                   (local-unset-key [(meta left)])
+                   (local-unset-key [(meta right)])))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (req-package org-bullets
+    :require org
+    :config (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 #+END_SRC
 
 *** winner-mode
@@ -1479,6 +1502,17 @@ done with =ediff=.
        ("C-x m" . eshell)
        ("C-x M" . (lambda () (interactive) (eshell t))))))
 #+END_SRC
+
+*** elfeed
+There doesn't seem to be a nice simple feed reader that I would like.
+Let's see how Emacs fares with one. There is a couple of problems
+already, such as being unable to sync feeds between computers.
+
+#+BEGIN_SRC emacs-lisp
+  (req-package elfeed)
+#+END_SRC
+
+Feeds are defined in my private configuration.
 
 * Fulfill Requirements
 
