@@ -273,20 +273,16 @@ I want utf-8:
 #+END_SRC
 
 *** Mac settings
-I did a stupid mistake a long time ago when I started using Emacs on a
-Mac. I thought the command-key was a good fit for a meta. Now when I
-use Emacs or Emacs-like bindings anywhere else, I have to use
-option-key for meta, and in Emacs command-key. Well, here are the
-settings anyway with command as meta:
+Setup Mac keyboard to be close to Linux.
 
 #+BEGIN_SRC emacs-lisp
   (if (eq system-type 'darwin)
-    (setq mac-pass-option-to-system t
+    (setq mac-pass-option-to-system nil
           mac-pass-control-to-system nil
           mac-pass-command-to-system nil
-          mac-command-key-is-meta t
-          mac-command-modifier 'meta
-          mac-option-modifier nil
+          mac-command-key-is-meta nil
+          mac-command-modifier 'hyper
+          mac-option-modifier 'meta
           mac-control-modifier 'control))
 #+END_SRC
 
