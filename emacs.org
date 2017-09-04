@@ -518,8 +518,18 @@ Show column number and buffer size in the modeline:
 #+END_SRC
 
 Do not minimize Emacs on =c-z=
-(when (or window-system (daemonp))
-  (global-unset-key (kbd "C-z")))
+#+BEGIN_SRC emacs-lisp
+  (when (or window-system (daemonp))
+    (global-unset-key (kbd "C-z")))
+#+END_SRC
+
+On Linux do not scroll fast as it's a bit problematic
+#+BEGIN_SRC emacs-lisp
+  (when (eq system-type 'linux)
+    (setq mouse-wheel-scroll-amount '(2 ((shift) . 1)))
+    (setq mouse-wheel-progressive-speed nil))
+#+END_SRC
+
 *** Modeline
 People seem to like modeline packages, we'll let's try one this
 year. This has to be defined before the theme below, otherwise the
