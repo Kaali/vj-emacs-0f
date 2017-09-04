@@ -743,6 +743,20 @@ I haven't used =Projectile=, but let's see what the fuzz it about:
     :config (bind-keys ("M-'" . helm-projectile)))
 #+END_SRC
 
+*** Python
+
+#+BEGIN_SRC emacs-lisp
+  (req-package anaconda-mode
+    :config
+    (progn
+      (add-hook 'python-mode-hook 'anaconda-mode)
+      (add-hook 'python-mode-hook 'anaconda-eldoc-mode)))
+  (req-package company-anaconda
+    :require company
+    :config
+    (eval-after-load 'company '(add-to-list 'company-backends 'company-anaconda)))
+#+END_SRC
+
 *** C and C++
 I like to use =subword-mode= in C -languages and I don't like when
 namespaces in C++ indents the block, as then all my code would be at
