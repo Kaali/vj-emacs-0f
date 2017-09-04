@@ -1036,20 +1036,12 @@ try it out more this year.
       (add-hook 'c++-mode-hook (lambda () (setq flycheck-clang-language-standard "c++11")))))
 
   (req-package helm-flycheck
-    :require (flycheck dash)
+    :require (flycheck)
     :commands helm-flycheck
     :init
     (bind-key "C-c ! h"
               'helm-flycheck
               flycheck-mode-map))
-#+END_SRC
-*** dash
-An interesting documentation lookup tool for Mac OSX.
-
-#+BEGIN_SRC emacs-lisp
-  (req-package dash-at-point
-    :commands dash-at-point
-    :init (bind-key "C-c d" 'dash-at-point))
 #+END_SRC
 
 *** company (autocomplete)
