@@ -256,6 +256,13 @@ Tuck undo files safely away:
         undo-tree-history-directory-alist `(("." . ,(expand-file-name "~/.emacs-undo/"))))
 #+END_SRC
 
+Show a help window with modal commands:
+
+#+BEGIN_SRC emacs-lisp
+  (req-package which-key
+    :config (which-key-mode))
+#+END_SRC
+
 *** Locale
 I want utf-8:
 
