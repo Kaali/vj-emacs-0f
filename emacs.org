@@ -1525,6 +1525,11 @@ already, such as being unable to sync feeds between computers.
 
 Feeds are defined in my private configuration.
 
+*** yaml
+#+BEGIN_SRC emacs-lisp
+  (req-package yaml-mode)
+#+END_SRC
+
 * Fulfill Requirements
 
 This has to be run to actually run =req-package= stuff.
