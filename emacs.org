@@ -587,48 +587,51 @@ growing really fast, and even without any extra packages, it's quite
 enjoyable addition to Emacs.
 
 #+BEGIN_SRC emacs-lisp
-  (req-package helm-config
-    :diminish (helm-mode . "")
-    :init
-    (progn
-      (setq
-       helm-idle-delay 0.1)
-      (setq helm-for-files-preferred-list
-            '(helm-source-buffers-list
-              helm-source-recentf
-              helm-source-bookmarks
-              helm-source-file-cache
-              helm-source-files-in-current-dir
-              helm-source-locate))
+    (req-package helm-config
+      :diminish (helm-mode . "")
+      :init
+      (progn
+        (setq
+         helm-idle-delay 0.1
+         helm-follow-mode-persistent t)
+        (setq helm-for-files-preferred-list
+              '(helm-source-files-in-current-dir
+                helm-source-buffers-list
+                helm-source-projectile-files-list
+                helm-source-recentf
+                helm-source-file-cache
+                helm-source-locate))
 
-      ;; I use ack for finding stuff in Helm, but the command can be ack or ack-grep
-      (let ((file-cmd " -Hn --no-group --no-color %e %p %f f")
-            (recurse-cmd " -H --no-group --no-color %e %p %f")
-            (define-search
-              (lambda (cmd)
-                (when (executable-find cmd)
-                  (setq helm-grep-default-command (concat cmd file-cmd)
-                        helm-grep-default-recurse-command (concat cmd recurse-cmd))))))
-        (funcall define-search "ack")
-        (funcall define-search "ack-grep"))
+        ;; I use ack for finding stuff in Helm, but the command can be ack or ack-grep
+        (let ((file-cmd " -Hn --no-group --no-color %e %p %f f")
+              (recurse-cmd " -H --no-group --no-color %e %p %f")
+              (define-search
+                (lambda (cmd)
+                  (when (executable-find cmd)
+                    (setq helm-grep-default-command (concat cmd file-cmd)
+                          helm-grep-default-recurse-command (concat cmd recurse-cmd))))))
+          (funcall define-search "ack")
+          (funcall define-search "ack-grep"))
 
-      (when (eq system-type 'darwin)
-        (setq helm-locate-command "mdfind %s -name %s"))
+        (when (eq system-type 'darwin)
+          (setq helm-locate-command "mdfind %s -name %s"))
 
-      (bind-keys*
-        ("C-c h" . helm-command-prefix)
-        ("C-x C-f" . helm-find-files)
-        ("M-x" . helm-M-x)
-        ("C-h C-h" . helm-M-x)
-        ("C-x C-b" . helm-buffers-list)
-        ("\M-N" . helm-next-source)
-        ("\M-P" . helm-previous-source)
-        ("C-'" . helm-for-files)
-        ("C-h c" . helm-show-kill-ring)
-        ("C-h m" . helm-all-mark-rings)
-        ("C-h a" . helm-apropos)))
-    :config
-      (helm-mode t))
+        (bind-keys*
+          ("C-c h" . helm-command-prefix)
+          ("C-x C-f" . helm-find-files)
+          ("M-x" . helm-M-x)
+          ("C-h C-h" . helm-M-x)
+          ("C-x C-b" . helm-buffers-list)
+          ("\M-N" . helm-next-source)
+          ("\M-P" . helm-previous-source)
+          ("C-'" . helm-for-files)
+          ("C-h c" . helm-show-kill-ring)
+          ("C-h m" . helm-all-mark-rings)
+          ("C-h a" . helm-apropos)
+          ("C-c f" . helm-do-grep-ag)
+          ("C-c g" . helm-grep-do-git-grep)))
+      :config
+        (helm-mode t))
 #+END_SRC
 
 *** helm-descbinds-mode
@@ -783,64 +786,56 @@ The configuration below works, but it's only partially integrated with
 =gtags= if =rtags= is not available.
 
 #+BEGIN_SRC emacs-lisp
-  (req-package rtags
-    :require auto-complete company helm-gtags
-    :init (rtags-enable-standard-keybindings c-mode-base-map)
-    :config
-    (progn
-      (setq rtags-completions-enabled t)
-      (require 'company-rtags)
-      (eval-after-load 'company '(add-to-list 'company-backends 'company-rtags))
+    (req-package rtags
+      :require auto-complete company helm-gtags helm-rtags
+      :init (rtags-enable-standard-keybindings c-mode-base-map)
+      :config
+      (progn
+        (setq rtags-display-result-backend 'helm)
+        (defun use-rtags (&optional useFileManager)
+          (and (rtags-executable-find "rc")
+               (cond ;((not (gtags-get-rootpath)) t)
+                     ((and (not (eq major-mode 'c++-mode))
+                           (not (eq major-mode 'c-mode))) (rtags-has-filemanager))
+                     (useFileManager (rtags-has-filemanager))
+                     (t (rtags-is-indexed)))))
 
-      ;; Override this function from rtags, it's broken there.
-      (eval-after-load 'rtags
-        '(defun rtags-goto-line-col (line column)
-           (goto-line line)
-           (move-to-column (1- column))))
+        (defun tags-find-symbol-at-point (&optional prefix)
+          (interactive "P")
+          (if (and (not (rtags-find-symbol-at-point prefix)) rtags-last-request-not-indexed)
+              (helm-gtags-find-tag)))
+        (defun tags-find-references-at-point (&optional prefix)
+          (interactive "P")
+          (if (and (not (rtags-find-references-at-point prefix)) rtags-last-request-not-indexed)
+              (helm-gtags-find-rtag)))
+        (defun tags-find-symbol ()
+          (interactive)
+          (call-interactively (if (use-rtags) 'rtags-find-symbol 'helm-gtags-find-symbol)))
+        (defun tags-find-references ()
+          (interactive)
+          (call-interactively (if (use-rtags) 'rtags-find-references 'helm-gtags-find-rtag)))
+        (defun tags-find-file ()
+          (interactive)
+          (call-interactively (if (use-rtags t) 'rtags-find-file 'helm-gtags-find-files)))
+        (defun tags-imenu ()
+          (interactive)
+          (call-interactively (if (use-rtags t) 'rtags-imenu 'idomenu)))
+        (defun tags-previous ()
+          (interactive)
+          (call-interactively (if (use-rtags) 'rtags-location-stack-back 'helm-gtags-previous-history)))
 
-      (defun use-rtags (&optional useFileManager)
-        (and (rtags-executable-find "rc")
-             (cond ;((not (gtags-get-rootpath)) t)
-                   ((and (not (eq major-mode 'c++-mode))
-                         (not (eq major-mode 'c-mode))) (rtags-has-filemanager))
-                   (useFileManager (rtags-has-filemanager))
-                   (t (rtags-is-indexed)))))
-
-      (defun tags-find-symbol-at-point (&optional prefix)
-        (interactive "P")
-        (if (and (not (rtags-find-symbol-at-point prefix)) rtags-last-request-not-indexed)
-            (helm-gtags-find-tag)))
-      (defun tags-find-references-at-point (&optional prefix)
-        (interactive "P")
-        (if (and (not (rtags-find-references-at-point prefix)) rtags-last-request-not-indexed)
-            (helm-gtags-find-rtag)))
-      (defun tags-find-symbol ()
-        (interactive)
-        (call-interactively (if (use-rtags) 'rtags-find-symbol 'helm-gtags-find-symbol)))
-      (defun tags-find-references ()
-        (interactive)
-        (call-interactively (if (use-rtags) 'rtags-find-references 'helm-gtags-find-rtag)))
-      (defun tags-find-file ()
-        (interactive)
-        (call-interactively (if (use-rtags t) 'rtags-find-file 'helm-gtags-find-files)))
-      (defun tags-imenu ()
-        (interactive)
-        (call-interactively (if (use-rtags t) 'rtags-imenu 'idomenu)))
-      (defun tags-previous ()
-        (interactive)
-        (call-interactively (if (use-rtags) 'rtags-location-stack-back 'helm-gtags-previous-history)))
-
-      (bind-keys
-       :map c-mode-base-map
-       ("M-." . tags-find-symbol-at-point)
-       ("M-," . tags-previous)
-       ("C-." . tags-find-symbol)
-       ("C-," . tags-find-references)
-       ("C-c <" . rtags-previous-match)
-       ("C-c >" . rtags-next-match)
-       ("C-<left>" . rtags-previous-match)
-       ("C-<right>" . rtags-next-match)
-       ("C-\\" . rtags-display-summary))))
+        (bind-keys
+         :map c-mode-base-map
+         ("M-." . tags-find-symbol-at-point)
+         ("M-," . tags-previous)
+         ("C-." . tags-find-symbol)
+         ("C-," . tags-find-references)
+         ("C-c <" . rtags-previous-match)
+         ("C-c >" . rtags-next-match)
+         ("C-<left>" . rtags-previous-match)
+         ("C-<right>" . rtags-next-match)
+         ("C-\\" . rtags-display-summary)))
+      (rtags-enable-standard-keybindings))
 #+END_SRC
 
 **** Irony
@@ -857,7 +852,7 @@ can install =libclang= with:
   $ brew install llvm --with-clang
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp :tangle off
+#+BEGIN_SRC emacs-lisp
   (req-package irony
     :config
     (progn
@@ -899,7 +894,7 @@ To set user headers, see =company-c-headers-path-user=.
 Because =irony= mode can read compile options from multiple different
 project styles, it's convenient to use [[https://github.com/Sarcasm/flycheck-irony][flycheck-irony]] for =flycheck=.
 
-#+BEGIN_SRC emacs-lisp :tangle off
+#+BEGIN_SRC emacs-lisp
   (req-package flycheck-irony
     :require (flycheck irony)
     :config (eval-after-load 'flycheck '(add-to-list 'flycheck-checkers 'irony)))
@@ -909,7 +904,7 @@ There is also =irony-eldoc= for seeing function interfaces when you
 place the point on top of a function. It can only understand overloads
 by arity, but it's better than nothing.
 
-#+BEGIN_SRC emacs-lisp :tangle off
+#+BEGIN_SRC emacs-lisp
   (req-package irony-eldoc
     :require (irony eldoc)
     :config (add-hook 'irony-mode-hook 'irony-eldoc))
